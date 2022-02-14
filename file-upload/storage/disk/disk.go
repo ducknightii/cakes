@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/ducknightii/cakes/file-upload/storage/types"
 )
 
 type Disk struct {
@@ -30,12 +32,12 @@ func (d *Disk) Upload(bucketName, objectName, contentType string, body []byte) (
 	return fmt.Sprintf(d.BaseUrl, bucketName) + "/" + objectName, nil
 }
 
-func (d *Disk) MultiUpload(bucketName, objectName, contentType string, fileSize int64, reader io.Reader) (string, error) {
+func (d *Disk) MultiUpload(bucketName, objectName, contentType string, fileSize int64, reader types.Reader) (string, error) {
 
 	return d.UploadFromStream(bucketName, objectName, contentType, reader)
 }
 
-func (d *Disk) UploadFromStream(bucketName, objectName, contentType string, reader io.Reader) (string, error) {
+func (d *Disk) UploadFromStream(bucketName, objectName, contentType string, reader types.Reader) (string, error) {
 	// store uploaded file into local path
 	localFile := savePath + "/" + objectName
 	out, err := os.Create(localFile)

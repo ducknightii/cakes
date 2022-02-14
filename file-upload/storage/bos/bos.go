@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ducknightii/cakes/file-upload/storage/types"
+
 	"github.com/baidubce/bce-sdk-go/services/bos"
 	"github.com/baidubce/bce-sdk-go/services/bos/api"
 )
@@ -75,7 +77,7 @@ func (c *client) Upload(bucketName, objectName, contentType string, body []byte)
 // UploadFromStream 流式上传
 // notes: 任然是全部读取到内存再发起请求，由于用的io.reader 关闭由外部控制，所以采用阻塞上传，避免还没读完被关闭
 // 内存的耗费 io.Reader -> buffer -> body 大概翻了4倍 (参考slice扩容规律)  (还未完全读完具体实现)
-func (c *client) UploadFromStream(bucketName, objectName, contentType string, reader io.Reader) (string, error) {
+func (c *client) UploadFromStream(bucketName, objectName, contentType string, reader types.Reader) (string, error) {
 	cur := time.Now()
 	args := new(api.PutObjectArgs)
 	args.StorageClass = api.STORAGE_CLASS_STANDARD_IA
@@ -90,7 +92,7 @@ func (c *client) UploadFromStream(bucketName, objectName, contentType string, re
 }
 
 // MultiUpload 分块上传
-func (c *client) MultiUpload(bucketName, objectName, contentType string, fileSize int64, reader io.Reader) (string, error) {
+func (c *client) MultiUpload(bucketName, objectName, contentType string, fileSize int64, reader types.Reader) (string, error) {
 	cur := time.Now()
 
 	partSize := (c.client.MultipartSize +

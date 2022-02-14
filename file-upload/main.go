@@ -18,6 +18,9 @@ import (
 	"github.com/ducknightii/cakes/file-upload/storage"
 )
 
+//var bucket = "***" // oss
+var bucket = "***" //bos
+
 func main() {
 	storage.Init()
 	http.HandleFunc("/upload", handleUploadFile)
@@ -108,7 +111,7 @@ func fileSaveBytes(file multipart.File, localFile string) error {
 	fmt.Println("bce.NewBodyFromBytes")
 	memStat()*/
 
-	saveUrl, err := storage.Storage.Upload("***", localFile, "application/octet-stream", buf.Bytes())
+	saveUrl, err := storage.Storage.Upload(bucket, localFile, "application/octet-stream", buf.Bytes())
 	if err != nil {
 		return err
 	}
@@ -131,7 +134,7 @@ func fileSaveBytes(file multipart.File, localFile string) error {
 }
 
 func fileSaveStream(file multipart.File, localFile string) error {
-	saveUrl, err := storage.Storage.UploadFromStream("***", localFile, "application/octet-stream", file)
+	saveUrl, err := storage.Storage.UploadFromStream(bucket, localFile, "video/mp4", file)
 	if err != nil {
 		return err
 	}
@@ -154,7 +157,7 @@ func fileSaveStream(file multipart.File, localFile string) error {
 }
 
 func fileSaveMulti(file multipart.File, localFile string, fileSize int64) error {
-	saveUrl, err := storage.Storage.MultiUpload("***", localFile, "application/octet-stream", fileSize, file)
+	saveUrl, err := storage.Storage.MultiUpload(bucket, localFile, "application/octet-stream", fileSize, file)
 	if err != nil {
 		return err
 	}
