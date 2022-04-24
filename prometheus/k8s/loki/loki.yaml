@@ -1,0 +1,193 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: loki
+  name: loki
+  namespace: loki
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 7
+  selector:
+    matchLabels:
+      k8s-app: loki
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        logging: "true"
+      labels:
+        k8s-app: loki
+      name: loki
+    spec:
+      containers:
+        - args:
+            - -config.file=/etc/loki/local-config.yaml
+          image: grafana/loki:2.5.0
+          imagePullPolicy: IfNotPresent
+          name: loki
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /etc/loki/local-config.yaml
+              name: loki-config
+              readOnly: true
+              subPath: loki-config.yaml
+            - mountPath: /tmp/loki
+              name: data
+        - args:
+            - -config.file=/etc/promtail/config.yml
+            #- -log.level=debug
+          image: grafana/promtail:2.5.0
+          imagePullPolicy: IfNotPresent
+          name: promtail
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /etc/promtail/config.yml
+              name: loki-config
+              readOnly: true
+              subPath: promtail-config.yaml
+            - mountPath: /var/log
+              name: log
+            - mountPath: /var/lib
+              name: lib
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - hostPath:
+            path: /tmp/loki
+            type: Directory
+          name: data
+        - hostPath:
+            path: /var/log
+            type: Directory
+          name: log
+        - hostPath:
+            path: /var/lib
+            type: Directory
+          name: lib
+        - configMap:
+            name: loki-config
+          name: loki-config
+---
+apiVersion: v1
+data:
+  loki-config.yaml: |-
+    auth_enabled: false
+    
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+    
+    common:
+      path_prefix: /tmp/loki
+      storage:
+        filesystem:
+          chunks_directory: /tmp/loki/chunks
+          rules_directory: /tmp/loki/rules
+      replication_factor: 1
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+    
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+    
+    ruler:
+      alertmanager_url: http://localhost:9093
+    
+    # By default, Loki will send anonymous, but uniquely-identifiable usage and configuration
+    # analytics to Grafana Labs. These statistics are sent to https://stats.grafana.org/
+    #
+    # Statistics help us better understand how Loki is used, and they show us performance
+    # levels for most users. This helps us prioritize features and documentation.
+    # For more information on what's sent, look at
+    # https://github.com/grafana/loki/blob/main/pkg/usagestats/stats.go
+    # Refer to the buildReport method to see what goes into a report.
+    #
+    # If you would like to disable reporting, uncomment the following lines:
+    #analytics:
+    #  reporting_enabled: false
+  promtail-config.yaml: |-
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+    
+    positions:
+      filename: /tmp/positions.yaml # 记得挂出来
+    
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+    
+    scrape_configs:
+      - job_name: system
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              log_from: varlogs
+              __path__: /var/log/*log
+      - job_name: containers
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              log_from: static_pods
+              __path__: /var/log/pods/*/*/*.log
+        pipeline_stages:
+          - docker: {}
+          - match:
+              selector: '{log_from="static_pods"}'
+              stages:
+                - regex:
+                    source: filename
+                    expression: "(?:pods)/(?P<namespace>\\S+?)_(?P<pod>\\S+)-\\S+?-\\S+?_\\S+?/(?P<container>\\S+?)/"
+                - labels:
+                    namespace:
+                    pod:
+                    container:
+
+
+kind: ConfigMap
+metadata:
+  labels:
+    k8s-app: loki
+  name: loki-config
+  namespace: loki
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: loki
+  name: loki
+  namespace: loki
+spec:
+  ports:
+    - name: "http"
+      port: 3100
+      protocol: TCP
+    - name: "grpc"
+      port: 9096
+      protocol: TCP
+    - name: "promtail"
+      port: 9080
+      protocol: TCP
+  selector:
+    k8s-app: loki
+  type: NodePort
