@@ -1,0 +1,9 @@
+{
+  "topic": "gate_event_dev",
+  "group.id": "",
+  "bootstrap.servers" : "121.199.47.41:9093,121.199.7.137:9093,120.26.46.233:9093",
+  "sasl.mechanism" : "PLAIN",
+  "security.protocol" : "sasl_ssl",
+  "sasl.username" : "alikafka_pre-cn-v0h1mazbi003",
+  "sasl.password" : "14A0RYIqHsb56FeGsC7EfbR6DG0MoLsu"
+}
