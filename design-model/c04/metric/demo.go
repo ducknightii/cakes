@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/ducknightii/cakes/design-model/c04/metric/viewer"
 	"time"
 
 	"github.com/ducknightii/cakes/design-model/c04/metric/collector"
@@ -23,10 +24,13 @@ func main() {
 		ResponseMs: 200,
 	})
 
-	consoleReporterIns := reporter.NewConsoleReporter(storageIns)
+	consoleViewer := viewer.NewConsoleViewer()
+
+	consoleReporterIns := reporter.NewConsoleReporter(storageIns, consoleViewer)
 	consoleReporterIns.StartReport()
 
-	emailReporterIns := reporter.NewEmailReporter(storageIns, []string{"ducknightii@gmail.com"})
+	emailViewer := viewer.NewEmailViewer([]string{"ducknightii@gmail.com"})
+	emailReporterIns := reporter.NewEmailReporter(storageIns, emailViewer)
 	emailReporterIns.StartReport()
 
 	time.Sleep(time.Minute * 10)

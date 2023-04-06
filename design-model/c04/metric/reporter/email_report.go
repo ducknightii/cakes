@@ -1,17 +1,15 @@
 package reporter
 
 import (
-	"fmt"
+	"github.com/ducknightii/cakes/design-model/c04/metric/viewer"
 	"time"
 
-	"github.com/ducknightii/cakes/design-model/c04/metric/aggregator"
 	"github.com/ducknightii/cakes/design-model/c04/metric/storage"
 	cron "github.com/robfig/cron/v3"
 )
 
 type EmailReporter struct {
-	storage     storage.Storage
-	emailSender []string
+	reporter
 }
 
 func (e EmailReporter) StartReport() {
@@ -21,12 +19,7 @@ func (e EmailReporter) StartReport() {
 		now := time.Now()
 		startAt := now.Add(-1 * time.Hour)
 
-		requestInfos := e.storage.List("test", startAt.Unix(), now.Unix())
-
-		stat := aggregator.Aggregator(requestInfos)
-
-		fmt.Printf("[%s-%s] email to [%v] stat: %+v\n", startAt, now, e.emailSender, stat)
-
+		e.doReport(startAt.Unix(), now.Unix())
 	})
 	if err != nil {
 		panic(err)
@@ -35,9 +28,11 @@ func (e EmailReporter) StartReport() {
 	cronIns.Start()
 }
 
-func NewEmailReporter(storage storage.Storage, emailSender []string) EmailReporter {
+func NewEmailReporter(storage storage.Storage, viewer viewer.Viewer) EmailReporter {
 	return EmailReporter{
-		storage:     storage,
-		emailSender: emailSender,
+		reporter{
+			storage: storage,
+			viewer:  viewer,
+		},
 	}
 }
